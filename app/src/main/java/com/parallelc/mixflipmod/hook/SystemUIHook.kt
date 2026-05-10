@@ -24,6 +24,7 @@ import io.github.libxposed.api.XposedInterface.Chain
 import io.github.libxposed.api.XposedInterface.HookHandle
 import io.github.libxposed.api.XposedInterface.Hooker
 import io.github.libxposed.api.XposedInterface.Invoker.Type
+import io.github.libxposed.api.XposedInterface.PRIORITY_LOWEST
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 
 object SystemUIHook : BaseHook() {
@@ -180,8 +181,8 @@ object SystemUIHook : BaseHook() {
             val (handle, maxIcons) = expandFoldedIcons(chain)
             runWithCleanup({ restoreFoldedIcons(chain, handle, maxIcons) }) { chain.proceed() }
         }
-        hook(containerClass.method("calculateIconXTranslations"), foldedIconHooker)
-        hook(containerClass.method("onMeasure", Int::class.java, Int::class.java), foldedIconHooker)
+        hook(containerClass.method("calculateIconXTranslations"), PRIORITY_LOWEST, foldedIconHooker)
+        hook(containerClass.method("onMeasure", Int::class.java, Int::class.java), PRIORITY_LOWEST, foldedIconHooker)
 
         val statusIconClass = param.classLoader.findClass("com.android.systemui.statusbar.views.MiuiStatusIconContainer")
         hook(statusIconClass.method("onMeasure", Int::class.java, Int::class.java)) { chain ->

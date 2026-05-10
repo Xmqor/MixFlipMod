@@ -20,6 +20,8 @@ internal fun log(msg: String, e: Throwable? = null) {
 
 internal fun hook(origin: Executable, hooker: Hooker): HookHandle = module!!.hook(origin).intercept(hooker)
 
+internal fun hook(origin: Executable, priority: Int, hooker: Hooker): HookHandle = module!!.hook(origin).setPriority(priority).intercept(hooker)
+
 internal fun prefEnabled(key: String): Boolean {
     return module!!.getRemotePreferences(Prefs.NAME).getBoolean(key, false)
 }
