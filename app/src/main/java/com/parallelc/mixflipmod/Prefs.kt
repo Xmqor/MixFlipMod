@@ -57,4 +57,8 @@ object Prefs {
     fun flipScreenScalePackage(key: String) = key.removePrefix(FLIP_SCREEN_SCALE_PREFIX)
 
     const val DEFAULT_FLIP_IME_PKG = "com.sohu.inputmethod.sogou.xiaomi"
+
+    // com.sohu.inputmethod.sogou.xiaomi
+    const val SOGOU_TOOLBAR_FIX   = "sogou_toolbar_fix"
+    const val SOGOU_CLIPBOARD_FIX = "sogou_clipboard_fix"
 }

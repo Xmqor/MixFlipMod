@@ -164,6 +164,14 @@ private val flipHomeConfig = AppConfig(
     ),
 )
 
+private val sogouConfig = AppConfig(
+    packageName = "com.sohu.inputmethod.sogou.xiaomi",
+    prefs = listOf(
+        PrefSpec.Switch(Prefs.SOGOU_TOOLBAR_FIX, R.string.pref_sogou_toolbar_fix),
+        PrefSpec.Switch(Prefs.SOGOU_CLIPBOARD_FIX, R.string.pref_sogou_clipboard_fix),
+    ),
+)
+
 internal val configNodes = listOf(
     ConfigNode.Group(
         id = "hide_outer",
@@ -174,6 +182,7 @@ internal val configNodes = listOf(
     ConfigNode.Package(systemFrameworkConfig),
     ConfigNode.Package(systemUiConfig),
     ConfigNode.Package(flipHomeConfig),
+    ConfigNode.Package(sogouConfig),
 )
 
 internal val appConfigs = configNodes.flatMap { it.packages }

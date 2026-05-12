@@ -63,6 +63,9 @@
     <string name="pref_fliphome_app_long_press_menu">应用桌面长按菜单</string>
     <string name="pref_fliphome_app_long_press_menu_summary">增加应用信息选项</string>
 
+    <string name="pref_sogou_toolbar_fix">恢复外屏工具栏</string>
+    <string name="pref_sogou_clipboard_fix">恢复外屏剪贴板候选词</string>
+
     <string name="cd_back">返回</string>
     <string name="cd_restart">重启</string>
 </resources>
