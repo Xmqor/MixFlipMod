@@ -1,10 +1,12 @@
 package com.parallelc.mixflipmod.hook
 
 import android.content.ComponentName
+import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.ActivityInfo
 import android.content.pm.ApplicationInfo
 import android.content.res.Configuration
+import android.provider.Settings
 import android.os.Bundle
 import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
@@ -75,6 +77,7 @@ object SystemHook {
                 flipInputMethodPackageCache = normalizeFlipInputMethodPackage(
                     prefs.getString(key, Prefs.DEFAULT_FLIP_IME_PKG)
                 )
+                syncFlipInputMethodIfFolded()
             }
             key.startsWith(Prefs.FLIP_SCREEN_MODE_PREFIX) -> {
                 val packageName = Prefs.flipScreenModePackage(key)
@@ -257,6 +260,8 @@ object SystemHook {
 
         val immsClass = param.classLoader.findClass("com.android.server.inputmethod.InputMethodManagerService")
         val serviceImpl = param.classLoader.findClass("com.android.server.inputmethod.InputMethodManagerServiceImpl")
+        inputMethodServiceImplClass = serviceImpl
+        inputMethodSettingsRepositoryClass = param.classLoader.findClass("com.android.server.inputmethod.InputMethodSettingsRepository")
         runCatching { module!!.deoptimize(serviceImpl.method("getSogouMethodIdLocked", immsClass)) }
         runCatching { module!!.deoptimize(serviceImpl.method($$"lambda$onDisplayDeviceStateChanged$8")) }
         runCatching {
@@ -284,10 +289,55 @@ object SystemHook {
     }
 
     private fun inputMethodPackage(param: SystemServerStartingParam, methodId: String, userId: Int): String? {
-        val repository = param.classLoader.findClass("com.android.server.inputmethod.InputMethodSettingsRepository")
+        val repository = inputMethodSettingsRepositoryClass ?: return null
         val settings = repository.method("get", Int::class.java).invoke(null, userId) ?: return null
         val imi = settings.callMethod("getMethodMap")?.callMethod("get", methodId) ?: return null
         return imi.callMethod("getPackageName") as? String
+    }
+
+    private fun syncFlipInputMethodIfFolded() {
+        runCatching {
+            val serviceImplClass = inputMethodServiceImplClass ?: return
+            val serviceImpl = serviceImplClass.method("getInstance").invoke(null) ?: return
+            if (serviceImpl.getField("mDeviceFolded") as? Boolean != true) return
+
+            val context = serviceImpl.getField("mContext") as? Context ?: return
+            val imms = serviceImpl.getField("mImms") ?: return
+            val userId = imms.getField("mCurrentImeUserId") as? Int ?: return
+            val methodId = inputMethodIdForPackage(flipInputMethodPackageCache, userId) ?: return
+
+            val resolver = context.contentResolver
+            val secureSettingsClass = Settings.Secure::class.java
+            val getStringForUser = secureSettingsClass.method(
+                "getStringForUser",
+                android.content.ContentResolver::class.java,
+                String::class.java,
+                Int::class.javaPrimitiveType!!
+            )
+            val putStringForUser = secureSettingsClass.method(
+                "putStringForUser",
+                android.content.ContentResolver::class.java,
+                String::class.java,
+                String::class.java,
+                Int::class.javaPrimitiveType!!
+            )
+            val current = getStringForUser.invoke(null, resolver, DEFAULT_INPUT_METHOD, userId) as? String
+            if (current != methodId) {
+                putStringForUser.invoke(null, resolver, DEFAULT_INPUT_METHOD, methodId, userId)
+            }
+        }
+    }
+
+    private fun inputMethodIdForPackage(packageName: String, userId: Int): String? {
+        val repository = inputMethodSettingsRepositoryClass ?: return null
+        val settings = repository.method("get", Int::class.java).invoke(null, userId) ?: return null
+        val methodMap = settings.callMethod("getMethodMap") ?: return null
+        val backingMap = methodMap.getField("mMap") as? Map<*, *> ?: return null
+        return backingMap.entries.firstNotNullOfOrNull { (methodId, imi) ->
+            val id = methodId as? String ?: return@firstNotNullOfOrNull null
+            val imePackageName = imi?.callMethod("getPackageName") as? String
+            if (imePackageName == packageName) id else null
+        }
     }
 
     // ── Utility ──────────────────────────────────────────────────
@@ -302,6 +352,7 @@ object SystemHook {
 
     private const val FLIP_SCREEN_META_DATA = "miui.supportFlipFullScreen"
     private const val WATCH_OVERLAY_PROPERTY = "miui.supportFlipWatchOverlayGroupView"
+    private const val DEFAULT_INPUT_METHOD = "default_input_method"
     private const val LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS = 3
     private const val FLIP_UNSCALE = 1.0f
     @Volatile
@@ -314,6 +365,10 @@ object SystemHook {
     private var flipScreenModeCache: Map<String, FlipScreenMode> = emptyMap()
     @Volatile
     private var flipScreenScaleCache: Map<String, Float> = emptyMap()
+    @Volatile
+    private var inputMethodServiceImplClass: Class<*>? = null
+    @Volatile
+    private var inputMethodSettingsRepositoryClass: Class<*>? = null
     private var systemPrefsListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
     private var isFlipFolded: () -> Boolean = { false }
 }
