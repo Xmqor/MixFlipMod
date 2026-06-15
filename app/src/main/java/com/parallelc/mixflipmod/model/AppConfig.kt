@@ -106,6 +106,9 @@ internal val hideOuterPackages = listOf(
     "com.miui.calculator",
     "com.miui.gallery",
     "com.netease.cloudmusic",
+    "com.miui.home",
+    "com.miui.fliphome",
+    "com.android.systemui",
 )
 
 private val systemFrameworkConfig = AppConfig(
